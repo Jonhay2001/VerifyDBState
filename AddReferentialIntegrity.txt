@@ -1,0 +1,241 @@
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GAME1', 'Placeholder for GAME1', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GAME2', 'Placeholder for GAME2', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GAME3', 'Placeholder for GAME3', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GAME4', 'Placeholder for GAME4', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GAME6', 'Placeholder for GAME6', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GAME7', 'Placeholder for GAME7', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GME12', 'Placeholder for GME12', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GME13', 'Placeholder for GME13', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('GME15', 'Placeholder for GME15', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('RPG10', 'Placeholder for RPG10', 0);
+
+INSERT INTO products (productcode, productname, price)
+VALUES ('VNL14', 'Placeholder for VNL14', 0);
+
+ALTER TABLE orders 
+  ADD CONSTRAINT fk_orders_products 
+  FOREIGN KEY (productcode) 
+  REFERENCES products(productcode);
+
+
+SELECT 
+    (firstname || ' ' || lastname) AS full_name,
+    username
+FROM userbase
+WHERE FLOOR(MONTHS_BETWEEN(SYSDATE, birthday) / 12) >= 18;
+
+
+-- 3) Find maximum length and average length of USERNAME in USERBASE
+-- Jonathan Haynes
+SELECT MAX(LENGTH(USERNAME)) AS max_username_length,
+       ROUND(AVG(LENGTH(USERNAME)),2) AS avg_username_length
+FROM USERBASE;
+
+
+-- 4) Display every QUESTION that starts with 'What is' or 'What was' in SECURITYQUESTION
+-- Jonathan Haynes
+SELECT QUESTION
+FROM SECURITYQUESTION
+WHERE QUESTION LIKE 'What is %'
+   OR QUESTION LIKE 'What was %
+
+
+-- 5) For each product in REVIEWS show PRODUCTCODE, lowest RATING, and number of reviews; order by review count desc
+-- Jonathan Haynes
+SELECT PRODUCTCODE,
+       MIN(RATING) AS lowest_rating,
+       COUNT(*)    AS review_count
+FROM REVIEWS
+GROUP BY PRODUCTCODE
+ORDER BY review_count DESC;
+
+
+-- 6) From WISHLIST show PRODUCTCODEs at POSITION = 1 and number of users who ranked it #1
+-- Jonathan Haynes
+SELECT PRODUCTCODE,
+       COUNT(*) AS num_users_with_position_1
+FROM WISHLIST
+WHERE POSITION = 1
+GROUP BY PRODUCTCODE
+ORDER BY num_users_with_position_1 DESC;
+
+
+SELECT USERID, 
+       SUM(NVL(PRICE, 0)) AS total_spent
+FROM ORDERS
+GROUP BY USERID
+ORDER BY total_spent DESC;
+
+
+SELECT TRUNC(purchasedate) AS purchase_date,
+       SUM(NVL(price, 0)) AS gross_profit
+FROM orders
+GROUP BY TRUNC(purchasedate)
+ORDER BY gross_profit DESC;
+
+
+-- 9) PRODUCTCODE and sum of HOURSPLAYED from USERLIBRARY. Top 5 games by total play time.
+-- Jonathan Haynes
+SELECT PRODUCTCODE,
+       SUM(NVL(HOURSPLAYED,0)) AS total_hours_played
+FROM USERLIBRARY
+GROUP BY PRODUCTCODE
+ORDER BY total_hours_played DESC
+FETCH FIRST 5 ROWS ONLY;
+
+
+-- 10) Create a view showing each USERID and count of infractions they have received,
+-- sorted highest infraction count first (select from view to order)
+-- Jonathan Haynes
+CREATE OR REPLACE VIEW vw_user_infractions AS
+SELECT USERID,
+       COUNT(*) AS infraction_count
+FROM INFRACTIONS
+GROUP BY USERID;
+
+-- 11) Create a view showing USERID, RULENUM, and number of times that user broke that RULENUM.
+-- Jonathan Haynes
+CREATE OR REPLACE VIEW vw_user_rulenum_counts AS
+SELECT USERID,
+       RULENUM,
+       COUNT(*) AS times_broken
+FROM INFRACTIONS
+GROUP BY USERID, RULENUM;
+
+-- To view sorted by USERID:
+-- SELECT * FROM vw_user_rulenum_counts ORDER BY USERID, RULENUM;
+
+-- 12) Display every RULENUM, PENALTY assigned for that rule, and number of times that PENALTY was assigned to that RULENUM
+-- Jonathan Haynes
+SELECT RULENUM,
+       PENALTY,
+       COUNT(*) AS times_penalty_assigned
+FROM INFRACTIONS
+GROUP BY RULENUM, PENALTY
+ORDER BY RULENUM, times_penalty_assigned DESC;
+
+CREATE TABLE tickets (
+    ticket_id     NUMBER PRIMARY KEY,
+    datesubmitted DATE,
+    dateupdated   DATE,
+    status        VARCHAR2(20)
+);
+
+-- Insert some sample data
+INSERT INTO tickets VALUES (1, DATE '2024-06-01', DATE '2024-06-05', 'CLOSED');
+INSERT INTO tickets VALUES (2, DATE '2024-06-03', DATE '2024-06-08', 'CLOSED');
+INSERT INTO tickets VALUES (3, DATE '2024-06-05', NULL, 'OPEN');
+COMMIT;
+
+SELECT ROUND(AVG(dateupdated - datesubmitted),4) AS avg_days,
+       ROUND(MAX(dateupdated - datesubmitted),4) AS max_days,
+       ROUND(MIN(dateupdated - datesubmitted),4) AS min_days
+FROM tickets
+WHERE status = 'CLOSED';
+
+-- 1️⃣ Drop the existing table (if it already exists)
+BEGIN
+    EXECUTE IMMEDIATE 'DROP TABLE tickets CASCADE CONSTRAINTS';
+EXCEPTION
+    WHEN OTHERS THEN
+        IF SQLCODE != -942 THEN  -- ignore "table does not exist"
+            RAISE;
+        END IF;
+END;
+/
+
+-- 2️⃣ Recreate the table with the proper structure
+CREATE TABLE tickets (
+    ticket_id      NUMBER PRIMARY KEY,
+    email          VARCHAR2(50),
+    issue          VARCHAR2(100),
+    datesubmitted  DATE,
+    dateupdated    DATE,
+    status         VARCHAR2(20)
+);
+
+-- 3️⃣ Insert sample data
+INSERT INTO tickets VALUES (1, 'user1@example.com', 'Login Problem', DATE '2024-06-01', DATE '2024-06-03', 'CLOSED');
+INSERT INTO tickets VALUES (2, 'user2@example.com', 'Payment Issue', DATE '2024-06-02', NULL, 'NEW');
+INSERT INTO tickets VALUES (3, 'user3@example.com', 'App Crash', DATE '2024-06-04', DATE '2024-06-06', 'CLOSED');
+INSERT INTO tickets VALUES (4, 'user1@example.com', 'Password Reset', DATE '2024-06-07', NULL, 'NEW');
+INSERT INTO tickets VALUES (5, 'user2@example.com', 'Missing Order', DATE '2024-06-05', DATE '2024-06-10', 'CLOSED');
+
+COMMIT;
+
+-- 4️⃣ Confirm the data
+SELECT * FROM tickets ORDER BY ticket_id;
+
+-- 15) Display any user who has their FIRSTNAME or LASTNAME in their PASSWORD (case sensitive check)
+-- Jonathan Haynes
+SELECT USERID, USERNAME, FIRSTNAME, LASTNAME, PASSWORD
+FROM USERBASE
+WHERE INSTR(PASSWORD, FIRSTNAME) > 0
+   OR INSTR(PASSWORD, LASTNAME)  > 0;
+
+-- 16) Display every PUBLISHER and average PRICE of their products, sorted alphabetically by PUBLISHER
+-- Jonathan Haynes
+SELECT PUBLISHER,
+       ROUND(AVG(NVL(PRICE,0)),2) AS avg_price
+FROM PRODUCTS
+GROUP BY PUBLISHER
+ORDER BY PUBLISHER;
+
+-- 17) Create a view that displays PRODUCTNAME and PRICE for all products with a RELEASEDATE over 5 years ago.
+-- Apply a 25% discount to the PRICE.
+-- Jonathan Haynes
+CREATE OR REPLACE VIEW vw_old_products_discount AS
+SELECT PRODUCTNAME,
+       ROUND(PRICE * 0.75,2) AS discounted_price
+FROM PRODUCTS
+WHERE RELEASEDATE < ADD_MONTHS(SYSDATE, -60);
+-- 18) Calculate max and min PRICE of all products based on GENRE
+-- Jonathan Haynes
+SELECT GENRE,
+       MAX(PRICE) AS max_price,
+       MIN(PRICE) AS min_price
+FROM PRODUCTS
+GROUP BY GENRE
+ORDER BY GENRE;
+
+-- 19) Create a view that displays everything in CHATLOG from any messages with a DATESENT between now and the previous week
+-- Jonathan Haynes
+CREATE OR REPLACE VIEW vw_chat_past_week AS
+SELECT *
+FROM CHATLOG
+WHERE DATESENT BETWEEN SYSDATE - 7 AND SYSDATE;
+
+-- 20) Create a view that displays USERID, DATEASSIGNED, and PENALTY for any user whose PENALTY is not null and the infraction was assigned within the last month.
+-- Jonathan Haynes
+CREATE OR REPLACE VIEW vw_recent_penalties AS
+SELECT USERID,
+       DATEASSIGNED,
+       PENALTY
+FROM INFRACTIONS
+WHERE PENALTY IS NOT NULL
+  AND DATEASSIGNED >= ADD_MONTHS(SYSDATE, -1);
+
+
+
+
+
