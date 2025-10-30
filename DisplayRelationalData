@@ -1,0 +1,257 @@
+-- 1. Display every USERNAME and the lowest RATING they have left in a 
+SELECT u.username, 
+       MIN(r.rating) AS lowest_rating 
+FROM userbase u 
+JOIN reviews r 
+    ON u.userid = r.userid 
+GROUP BY u.username 
+ORDER BY u.username;
+
+-- 2. Display every user’s EMAIL, QUESTION, and ANSWER.
+SELECT 
+    u.email, 
+    q.question, 
+    q.answer
+FROM userbase u
+JOIN securityquestion q 
+    ON u.userid = q.userid
+ORDER BY u.email;
+
+-- 3. Display the FIRSTNAME, EMAIL, and WALLETFUNDS of every user that does not have a WISHLIST.
+SELECT 
+    u.firstname, 
+    u.email, 
+    u.walletfunds
+FROM userbase u
+LEFT JOIN wishlist w 
+    ON u.userid = w.userid
+WHERE w.userid IS NULL
+ORDER BY u.firstname, u.email;
+
+-- 4. Display every USERNAME and number of products they have ordered.
+SELECT DISTINCT p.productname,
+       p.releasedate,
+       p.price,
+       p.description
+FROM productlist p
+JOIN wishlist w
+  ON p.productcode = w.productcode
+ORDER BY p.productname;
+
+-- 5. Display the age of any user who has ordered a product within the last 6 months.
+
+SELECT p.productname,
+       MAX(r.rating) AS highest_rating,
+       COUNT(r.review) AS review_count
+FROM products p
+JOIN reviews r ON p.productcode = r.productcode
+GROUP BY p.productname
+ORDER BY highest_rating DESC, review_count DESC, p.productname;
+
+-- 6. Display the USERNAME and BIRTHDAY of the user who has the highest friend count.
+CREATE OR REPLACE VIEW products_5_or_1_ratings AS
+SELECT p.productname,
+       p.genre,
+       r.rating
+FROM productlist p
+JOIN reviews r
+  ON p.productcode = r.productcode
+WHERE r.rating IN (1, 5);
+
+-- 7. Display the PRODUCTNAME, RELEASEDATE, PRICE, and DESCRIPTION for any product found in the WISHLIST table.
+SELECT p.genre,
+       COUNT(o.orderid) AS total_products_ordered
+FROM orders o
+JOIN productlist p
+  ON o.productcode = p.productcode
+GROUP BY p.genre
+ORDER BY p.genre;
+
+-- 8. Display the PRODUCTNAME, highest RATING, and number of reviews for each product in the REVIEWS table.
+--    Order the results in descending order of the RATING.
+CREATE OR REPLACE VIEW publisher_price_hours AS
+SELECT p.publisher,
+       ROUND(AVG(p.price), 2) AS avg_price,
+       SUM(NVL(p.hoursplayed, 0)) AS total_hours_played
+FROM products p
+GROUP BY p.publisher
+
+-- 9. Create a view that displays the PRODUCTNAME, GENRE, and RATING for every product with a 5 or a 1 RATING.
+--    Order the results in ascending order of the RATING.
+SELECT p.publisher,
+       ROUND(SUM(o.price), 2) AS total_money_spent
+FROM orders o
+JOIN products p
+  ON o.productcode = p.productcode
+GROUP BY p.publisher
+ORDER BY total_money_spent DESC;
+
+-- 10. Display the count of products ordered, grouped by GENRE. Order the results in alphabetical order of GENRE.
+SELECT 
+    t.ticket_id, 
+    u.username, 
+    u.email, 
+    t.issue, 
+    t.dateupdated 
+FROM tickets t 
+JOIN userbase u 
+    ON t.email = u.email 
+WHERE t.status IN ('NEW', 'IN PROGRESS') 
+ORDER BY t.dateupdated DESC;
+
+-- 11. Create a view that displays each PUBLISHER, the average PRICE, and the sum of HOURSPLAYED for their products.
+SELECT 
+    u.username, 
+    COUNT(t.ticket_id) AS ticket_count 
+FROM userbase u 
+LEFT JOIN tickets t 
+    ON u.email = t.email 
+GROUP BY u.username 
+ORDER BY ticket_count DESC, u.username;
+
+-- 12. Display the sum of money spent on products and their corresponding PUBLISHER, from the ORDERS table.
+--     Order the results in descending order of the sum of money spent.
+SELECT DISTINCT u.userid,
+       u.email
+FROM userbase u
+JOIN tickets t
+  ON LOWER(u.email) = LOWER(t.email)
+WHERE LOWER(u.email) LIKE '%' || LOWER(u.firstname) || '%'
+   OR LOWER(u.email) LIKE '%' || LOWER(u.lastname) || '%'
+   OR LOWER(u.email) LIKE '%' || LOWER(u.firstname || '.' || u.lastname) || '%'
+   OR LOWER(u.email) LIKE '%' || LOWER(u.firstname || u.lastname) || '%';
+
+-- 13. Display the TICKETID, USERNAME, EMAIL, and ISSUE only for tickets with a STATUS of 'NEW' or 'IN PROGRESS',
+--     sorted by the latest DATEUPDATED.
+SELECT DISTINCT t.email AS ticket_email
+FROM tickets t
+WHERE t.status IN ('NEW', 'IN PROGRESS')
+  AND NOT EXISTS (
+      SELECT 1
+      FROM userbase ub
+      WHERE LOWER(ub.email) = LOWER(t.email)
+  );
+
+
+-- 14. Display the USERNAME and count of TICKETID that users have submitted for user support.
+
+SELECT t.ticket_id, 
+       u.firstname, 
+       u.lastname, 
+       u.username
+FROM tickets t
+JOIN userbase u
+  ON LOWER(t.email) = LOWER(u.email)  -- join via email
+WHERE LOWER(t.issue) LIKE '%' || LOWER(u.username) || '%'
+ORDER BY t.ticket_id;
+
+-- 15. Display the USERID and EMAIL of any user who has submitted a support ticket that used their FIRSTNAME,
+--     LASTNAME, or combination of the two in their EMAIL address.
+SELECT DISTINCT u.username,
+       u.password
+FROM tickets t
+JOIN userbase u
+  ON LOWER(u.email) = LOWER(t.email);
+
+
+
+-- 16. Display the EMAIL address of any user who has a 'NEW' or 'IN PROGRESS' support ticket STATUS,
+--     where the EMAIL is not currently saved in the USERBASE table.
+CREATE OR REPLACE VIEW recent_penalties AS
+SELECT u.username,
+       i.dateassigned,
+       i.penalty
+FROM infractions i
+JOIN userbase u
+  ON i.userid = u.userid
+WHERE i.penalty IS NOT NULL
+  AND i.dateassigned >= ADD_MONTHS(SYSDATE, -1);
+
+-- 17. Display the TICKETID, FIRSTNAME, LASTNAME, and USERNAME of any user whose USERNAME is mentioned in the ISSUE of a support ticket.
+SELECT u.username,
+       u.email,
+       FLOOR(MONTHS_BETWEEN(SYSDATE, u.birthday) / 12) AS age_years
+FROM userbase u
+WHERE FLOOR(MONTHS_BETWEEN(SYSDATE, u.birthday) / 12) >= 18
+  AND NOT EXISTS (
+      SELECT 1
+      FROM infractions i
+      WHERE i.userid = u.userid
+        AND i.dateassigned >= ADD_MONTHS(SYSDATE, -4)
+  )
+ORDER BY u.username;
+
+
+-- 18. Display the USERNAME and PASSWORD associated with the EMAIL address provided in the support tickets.
+SELECT u.username, 
+       i.dateassigned, 
+       (c.rulenum || ' ' || c.title) AS full_guideline_name
+FROM infractions i
+JOIN userbase u 
+  ON i.userid = u.userid
+JOIN communityrules c
+  ON i.rulenum = c.rulenum
+ORDER BY u.username, i.dateassigned DESC;
+
+
+-- 19. Create a view that displays the USERNAME, DATEASSIGNED, and PENALTY for any user whose PENALTY is not null
+--     and the infraction was assigned within the last month.
+SELECT u.userid,
+       u.username,
+       u.email,
+       NVL(SUM(c.severitypoint), 0) AS total_severity_points
+FROM userbase u
+LEFT JOIN infractions i
+       ON u.userid = i.userid
+LEFT JOIN communityrules c
+       ON i.rulenum = c.rulenum
+GROUP BY u.userid, u.username, u.email
+ORDER BY total_severity_points DESC, u.username;
+
+
+-- 20. Display the USERNAME and EMAIL of any user who is at least 18 years old and has not received an infraction within the last 4 months.
+SELECT c.title,
+       c.description,
+       i.penalty
+FROM infractions i
+JOIN communityrules c
+  ON i.rulenum = c.rulenum
+ORDER BY i.dateassigned DESC, c.title;
+
+-- 21. Display the USERNAME, DATEASSIGNED, and full guideline name (RULENUM and TITLE with a blank space inbetween)
+--     for any user who has violated the community rules.
+SELECT u.username,
+       COUNT(i.infractionid) AS infraction_count
+FROM userbase u
+JOIN infractions i
+  ON u.userid = i.userid
+GROUP BY u.username
+HAVING COUNT(i.infractionid) >= 15
+ORDER BY infraction_count DESC, u.username;
+
+-- 22. Display the USERID, USERNAME, EMAIL, and sum of all SEVERITYPOINTS each user has received.
+SELECT p.productname,
+       MAX(r.rating)        AS highest_rating,
+       COUNT(r.productcode) AS review_count
+FROM products p
+JOIN reviews r
+  ON p.productcode = r.productcode
+GROUP BY p.productname
+ORDER BY highest_rating DESC, review_count DESC, p.productname;
+
+-- 23. Display the TITLE, DESCRIPTION, and PENALTY for all infractions assigned.
+SELECT p.genre,
+       COUNT(o.orderid) AS total_products_ordered
+FROM orders o
+JOIN products p
+  ON o.productcode = p.productcode
+GROUP BY p.genre
+ORDER BY p.genre;
+
+-- 24. Display the USERNAME and count of infractions for users who have violated the community rules at least 15 times.
+CREATE OR REPLACE VIEW publisher_price_hours_alt AS
+SELECT p.publisher,
+       ROUND(AVG(p.price), 2) AS avg_price
+       -- no hoursplayed available in productlist by default; add if present
+FROM productlist p
+GROUP BY p.publisher;
